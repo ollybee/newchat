@@ -1,0 +1,16 @@
+A small chat app I am writing to learn nodejs and javascript. If your doing the same give me a shout.
+If you try this it works best with websockets, so use Chrome.
+
+Currently
+uses socket.io to handle connections from clients
+Pushes out last 10 messages to client on connection from a redis database
+Uses redis pub/sub to push out each keystroke to each user
+Allows users to edit old messages by clicking on them, all other clients updated per keystroke
+
+To do
+Allow replying to messages by clicking on them, diplay replies indented and stored as seperate thread/cahnnel in Redis
+Store timing Deltas in Redis to allow play back of chat
+impement login system (node openid)
+change message passing to JSON, check performance hit
+Refactor code to use more advanced Javascript techniques.
+lots more 
