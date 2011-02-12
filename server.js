@@ -1,10 +1,3 @@
-/**********************
-To do 
-
-
-
-
- ******************/
 
 var io = require('socket.io');
 var redis = require("redis");
@@ -16,7 +9,7 @@ socket.on('connection', function(client) {
 	var redisClient = redis.createClient();
 	var redisClient2 = redis.createClient();
 	redisClient2.incr('uid', function(err, uid) {
-	        socket.broadcast('usercount*' + uid);
+		socket.broadcast('usercount*' + uid);
 		var currentmessage = 0;
 		redisClient.subscribe('pubsub');
 
@@ -28,8 +21,8 @@ socket.on('connection', function(client) {
 				redisClient2.get('userposts_' + id[i], function(err, nid) {
 					client.send('newline*' + nid + '#' + id[moo]);
 					redisClient2.get('post_' + id[moo], function(err, message) {
-						if (message === null){
-						message = '';
+						if (message === null) {
+							message = '';
 						}
 						client.send(id[cow] + '*' + message);
 						cow--;

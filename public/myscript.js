@@ -90,11 +90,11 @@ $(document).ready(function() {
 			}
 			else
 			{
-				//curently onliny alows to reply to logged in users this logic should be moved to newlne
+				//curently only alows to reply to logged in users this logic should be moved to newlne
 				//to add live handlers when history is sent
 				currentusers[payload[1]]='';
 				
-				$('.'+payload[1]).live('click', function(){
+				$('.user'+payload[1]).live('click', function(){
 				console.log('click');
 	       			socket.send('reply*' + $(this).children('span').attr('id'));
 						});
