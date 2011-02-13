@@ -1,4 +1,3 @@
-
 var io = require('socket.io');
 var redis = require("redis");
 var connect = require('connect');
@@ -9,7 +8,10 @@ socket.on('connection', function(client) {
 	var redisClient = redis.createClient();
 	var redisClient2 = redis.createClient();
 	redisClient2.incr('uid', function(err, uid) {
-		socket.broadcast('usercount*' + uid);
+		socket.broadcast(JSON.stringify({
+			'type': 'usercount',
+			'u_id': uid
+		}));
 		var currentmessage = 0;
 		redisClient.subscribe('pubsub');
 
@@ -19,12 +21,15 @@ socket.on('connection', function(client) {
 			var cow = 9;
 			for (i = 9; i >= 0; i--) {
 				redisClient2.get('userposts_' + id[i], function(err, nid) {
-					client.send('newline*' + nid + '#' + id[moo]);
-					redisClient2.get('post_' + id[moo], function(err, message) {
+					redisClient2.get('post_' + nid[moo], function(err, message) {
 						if (message === null) {
 							message = '';
 						}
-						client.send(id[cow] + '*' + message);
+						client.send(JSON.stringify({
+							'type': 'text',
+							'm_id': id[cow],
+							'data': message
+						}));
 						cow--;
 					});
 					moo--;
@@ -36,8 +41,18 @@ socket.on('connection', function(client) {
 		 * solution is to attatch to dom based on id bubble sort. should be comined with above*/
 		redisClient2.incr('spannum', function(err, spanresponse) {
 			setTimeout(function() {
-				client.send('user*' + uid + '#' + spanresponse);
-				client.broadcast('newline*' + uid + '#' + spanresponse);
+				//client.send('user*' + uid + '#' + spanresponse);
+				client.send(JSON.stringify({
+					'type': 'user',
+					'u_id': uid,
+					'm_id': spanresponse
+				}));
+				//client.broadcast('newline*' + uid + '#' + spanresponse);
+				client.send(JSON.stringify({
+					'type': 'newline',
+					'u_id': uid,
+					'm_id': spanresponse
+				}));
 				currentmessage = spanresponse;
 				redisClient2.set('userposts_' + spanresponse, uid);
 				redisClient2.lpush('chatlist', currentmessage);
@@ -52,8 +67,13 @@ socket.on('connection', function(client) {
 		client.on('message', function(message) {
 			//	console.log(data);
 			function log(send) {
+				var outbound = {
+					'type': 'text',
+					'm_id': currentmessage,
+					'data': send
+				};
 				redisClient2.append('post_' + currentmessage, send);
-				redisClient2.publish("pubsub", currentmessage + '*' + send);
+				redisClient2.publish("pubsub", JSON.stringify(outbound));
 			}
 			var data = message.split('*', 2);
 			switch (data[0]) {
@@ -62,9 +82,14 @@ socket.on('connection', function(client) {
 					currentmessage = spanresponse;
 					redisClient2.set('userposts_' + spanresponse, uid);
 					redisClient2.lpush('chatlist', currentmessage);
-					redisClient2.publish("pubsub", 'newline*' + uid + '#' + spanresponse);
+					redisClient2.publish("pubsub", JSON.stringify({
+						'type': 'newline',
+						'u_id': uid,
+						'm_id': spanresponse
+					}))
 				});
 				break;
+
 			case '60':
 				log('&lt;');
 				break;
@@ -89,7 +114,11 @@ socket.on('connection', function(client) {
 
 		client.on('disconnect', function() {
 			redisClient.quit();
-			socket.broadcast('usercount*' + uid);
+			//socket.broadcast('usercount*' + uid);
+			socket.broadcast(JSON.stringify({
+				'type': 'usercount',
+				'u_id': uid
+			}));
 			redisClient2.quit();
 		});
 	});

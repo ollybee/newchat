@@ -59,32 +59,27 @@ $(document).ready(function() {
 	});
 
 	socket.on('message', function(message) {
-		payload = message.split('*', 2);
+		var payload = jQuery.parseJSON(message);
 
-		switch (payload[0]) {
+		switch (payload.type) {
 			/* Need to change this to accept JSON messages*/
 		case 'newline':
-			multiload = payload[1].split('#', 2);
-			content.prepend('<span class=user' + multiload[0] + ' ><br /><b>' + multiload[0] + ':</b><span id=n' + multiload[1] + '></span></span>');
-			if (multiload[0] == uid) {
+			content.prepend('<span class=user' + payload.u_id + ' ><br /><b>' + payload.u_id + ':</b><span id=n' + payload.m_id + '></span></span>');
+			if (payload.u_id == uid) {
 			//$('.'+uid).css("background-color","yellow");
-			newedit('n'+multiload[1]);
+			newedit('n'+payload.m_id);
 			}
 			else
 			{
 			//attach reply listener if not new
 			}
 			break;
-		case 'history':
-			multiload = payload[1].split('#', 2);
-			content.append(payload[1]);
-			break;
 		case 'usercount':
 			//console.log(payload[1]);
 			//if (currentusers.hasOwnProperty(incomingid))
-			if (payload[1] in currentusers)
+			if (payload.u_id in currentusers)
 			{
-				delete currentusers[payload[1]];
+				delete currentusers[payload.u_id];
 				//uodate users gray ou their posts
 				//console.log(currentusers);
 			}
@@ -92,39 +87,37 @@ $(document).ready(function() {
 			{
 				//curently only alows to reply to logged in users this logic should be moved to newlne
 				//to add live handlers when history is sent
-				currentusers[payload[1]]='';
+				currentusers[payload.u_id]='';
 				
-				$('.user'+payload[1]).live('click', function(){
-				console.log('click');
+				$('.user'+payload.u_id).live('click', function(){
 	       			socket.send('reply*' + $(this).children('span').attr('id'));
 						});
 				//console.log(currentusers);
 			}	
 			break;
 		case 'user':
-			multiload = payload[1].split('#', 2);
-			uid = multiload[0];
+			uid = payload.u_id;
 			$('.user'+uid).live('click', function(){
 				newedit($(this).children('span').attr('id'));
 				socket.send('new*'+$(this).children('span').attr('id'));
 				});
 			$('#uid').html(' Your ID: ' + uid);
 			$("<style type='text/css'> .user"+ uid +"{ color:#f00;} </style>").appendTo("head");
-			content.prepend('<span  class=user' + multiload[0] + '><br /><b>' + multiload[0] + ':</b><span id=n' + multiload[1] + '></span><span>');
-			newedit('n'+multiload[1]);
+			content.prepend('<span  class=user' + payload.u_id + '><br /><b>' + payload.u_id + ':</b><span id=n' +payload.m_id + '></span><span>');
+			newedit('n'+ payload.m_id);
 			break;
-
+/*
 		case 'del':
 			var text = $('#n' + payload[1]).text();
 			console.log(text);
 			console.log(payload[1]);
 			$('#n' + payload[1]).html(backspacetext);
 			break;
-
-		default:
-			$('#n' + payload[0]).append(payload[1]);
-			if ('n' + payload[0] !== currentedit){
-			$('#n' + payload[0]).stop(true,true).effect("highlight", {}, 400);
+*/
+		case 'text':
+			$('#n' + payload.m_id).append(payload.data);
+			if ('n' + payload.m_id !== currentedit){
+			$('#n' + payload.m_id).stop(true,true).effect("highlight", {}, 400);
 			}
 		}
 	});
