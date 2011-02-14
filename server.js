@@ -12,7 +12,7 @@ socket.on('connection', function(client) {
 			'type': 'usercount',
 			'u_id': uid
 		}));
-		var currentmessage = 0;
+		var currentmessage = 0; //dont think this is still needed try removing when stable
 		redisClient.subscribe('pubsub');
 
 		//below section should be rewritten with cloures. 
@@ -21,7 +21,12 @@ socket.on('connection', function(client) {
 			var cow = 9;
 			for (i = 9; i >= 0; i--) {
 				redisClient2.get('userposts_' + id[i], function(err, nid) {
-					redisClient2.get('post_' + nid[moo], function(err, message) {
+				client.send(JSON.stringify({
+                                                        'type': 'newline',
+                                                        'm_id': id[moo],
+                                                        'u_id': nid
+                                                }));	
+					redisClient2.get('post_' + id[moo], function(err, message) {
 						if (message === null) {
 							message = '';
 						}
@@ -48,7 +53,7 @@ socket.on('connection', function(client) {
 					'm_id': spanresponse
 				}));
 				//client.broadcast('newline*' + uid + '#' + spanresponse);
-				client.send(JSON.stringify({
+				client.broadcast(JSON.stringify({
 					'type': 'newline',
 					'u_id': uid,
 					'm_id': spanresponse
@@ -61,12 +66,14 @@ socket.on('connection', function(client) {
 		});
 
 		redisClient.on("message", function(channel, message) {
+		//		console.log(message);
 			client.send(message);
 		});
 
 		client.on('message', function(message) {
 			//	console.log(data);
 			function log(send) {
+			console.log(send);
 				var outbound = {
 					'type': 'text',
 					'm_id': currentmessage,
@@ -75,9 +82,12 @@ socket.on('connection', function(client) {
 				redisClient2.append('post_' + currentmessage, send);
 				redisClient2.publish("pubsub", JSON.stringify(outbound));
 			}
-			var data = message.split('*', 2);
-			switch (data[0]) {
-			case '13':
+
+			//console.log(message);
+			var payload = JSON.parse(message);
+			//console.log(payload);
+			switch (payload.type) {
+			case 'newline':
 				redisClient2.incr('spannum', function(err, spanresponse) {
 					currentmessage = spanresponse;
 					redisClient2.set('userposts_' + spanresponse, uid);
@@ -86,7 +96,7 @@ socket.on('connection', function(client) {
 						'type': 'newline',
 						'u_id': uid,
 						'm_id': spanresponse
-					}))
+					}));
 				});
 				break;
 
@@ -96,18 +106,22 @@ socket.on('connection', function(client) {
 			case '62':
 				log('&gt;');
 				break;
-				//backspace currently depreciated until I mov to diffs and JSON
+				/*backspace currently depreciated until I mov to diffs and JSON
 			case '8':
 				redisClient2.publish("pubsub", 'del*' + currentmessage);
 				break;
-			case 'reply':
-				console.log(data[1]);
+				*/
+			case 'reply'://work in progres
+				console.log(payload.data);
 				break;
 			case 'new':
-				currentmessage = data[1].substr(1);
+				currentmessage = payload.m_id.substring(1);
+				console.log(currentmessage);
+				console.log(payload.m_id);
 				break;
 			default:
-				log(String.fromCharCode(data));
+				//console.log(payload.data);
+				log(String.fromCharCode(payload.data));
 
 			}
 		});
