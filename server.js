@@ -6,26 +6,29 @@ var socket = io.listen(server);
 
 socket.on('connection', function(client) {
 	var redisClient = redis.createClient();
-	var redisClient2 = redis.createClient();
-	redisClient2.incr('uid', function(err, uid) {
+	var PubSubClient = redis.createClient();
+	var current_forum = 'firstchat';
+	var curent_message = '';
+
+	redisClient.incr('uid', function(err, uid) {
 		socket.broadcast(JSON.stringify({
 			'type': 'usercount',
 			'u_id': uid
 		}));
-		redisClient.subscribe('pubsub');
+		PubSubClient.subscribe(current_forum);
 
 		//below section should be rewritten with cloures. 
-		redisClient2.lrange('chatlist', 0, 9, function(err, id) {
+		redisClient.lrange(current_forum, 0, 9, function(err, id) {
 			var moo = 9;
 			var cow = 9;
 			for (i = 9; i >= 0; i--) {
-				redisClient2.get('userposts_' + id[i], function(err, nid) {
+				redisClient.get('userposts_' + id[i], function(err, nid) {
 					client.send(JSON.stringify({
 						'type': 'newline',
 						'm_id': id[moo],
 						'u_id': nid
 					}));
-					redisClient2.get('post_' + id[moo], function(err, message) {
+					redisClient.get('post_' + id[moo], function(err, message) {
 						if (message === null) {
 							message = '';
 						}
@@ -43,26 +46,26 @@ socket.on('connection', function(client) {
 
 		/*Dirty hack below, timeout to make sure history is written before user newline added 
 		 * solution is to attatch to dom based on id bubble sort. should be comined with above*/
-		redisClient2.incr('spannum', function(err, spanresponse) {
+		redisClient.incr('message_id', function(err, mid) {
 			setTimeout(function() {
 				client.send(JSON.stringify({
 					'type': 'user',
 					'u_id': uid,
-					'm_id': spanresponse
+					'm_id': mid
 				}));
 				client.broadcast(JSON.stringify({
 					'type': 'newline',
 					'u_id': uid,
-					'm_id': spanresponse
+					'm_id': mid
 				}));
-				currentmessage = spanresponse;
-				redisClient2.set('userposts_' + spanresponse, uid);
-				redisClient2.lpush('chatlist', currentmessage);
+				current_message = mid;
+				redisClient.set('userposts_' + mid, uid);
+				redisClient.lpush(current_forum, current_message);
 			},
 			200);
 		});
 
-		redisClient.on("message", function(channel, message) {
+		PubSubClient.on("message", function(channel, message) {
 			client.send(message);
 		});
 
@@ -71,30 +74,34 @@ socket.on('connection', function(client) {
 				// does not need to be reassigend of every message
 				var outbound = {
 					'type': 'text',
-					'm_id': currentmessage,
+					'm_id': current_message,
 					'data': send
 				};
-				redisClient2.append('post_' + currentmessage, send);
-				redisClient2.publish("pubsub", JSON.stringify(outbound));
+				redisClient.append('post_' + current_message, send);
+				redisClient.publish(current_forum, JSON.stringify(outbound));
 			}
 
 			var payload = JSON.parse(message);
 			switch (payload.type) {
 			case 'newline':
-				redisClient2.incr('spannum', function(err, spanresponse) {
-					currentmessage = spanresponse;
-					redisClient2.set('userposts_' + spanresponse, uid);
-					redisClient2.lpush('chatlist', currentmessage);
-					redisClient2.publish("pubsub", JSON.stringify({
+				redisClient.incr('message_id', function(err, mid) {
+					current_message = mid;
+					redisClient.set('userposts_' + mid, uid);
+					redisClient.lpush(current_forum, current_message);
+					redisClient.publish(current_forum, JSON.stringify({
 						'type': 'newline',
 						'u_id': uid,
-						'm_id': spanresponse
+						'm_id': mid
 					}));
 				});
 				break;
 			case 'reply':
-				//work in progres
+				/*work in progres
 				console.log(payload.data);
+				redisClient.llen(current_forum,
+				function(err, forum_index) {
+					current_forum = (current_forum + '_' + forum_index);
+				});*/
 				//create nee message id list forum_index
 				//update current forum (for see log funtion)
 				//update newline funtion
@@ -102,21 +109,22 @@ socket.on('connection', function(client) {
 				//client side newline needs to be altered
 				break;
 			case 'new':
-				currentmessage = payload.m_id.substring(1);
-				console.log(currentmessage);
+				current_message = payload.m_id.substring(1);
+				console.log(current_message);
 				console.log(payload.m_id);
 				break;
 			default:
-				switch (payload.data){
-			case '60':
-				log('&lt;');
-				break;
-			case '62':
-				log('&gt;');
-				break;
-			default:
-				log(String.fromCharCode(payload.data));
-			}}
+				switch (payload.data) {
+				case '60':
+					log('&lt;');
+					break;
+				case '62':
+					log('&gt;');
+					break;
+				default:
+					log(String.fromCharCode(payload.data));
+				}
+			}
 		});
 
 		client.on('disconnect', function() {
@@ -125,7 +133,7 @@ socket.on('connection', function(client) {
 				'type': 'usercount',
 				'u_id': uid
 			}));
-			redisClient2.quit();
+			redisClient.quit();
 		});
 	});
 });
