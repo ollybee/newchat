@@ -11,6 +11,5 @@ To do
 Allow replying to messages by clicking on them, diplay replies indented and stored as seperate thread/cahnnel in Redis
 Store timing Deltas in Redis to allow play back of chat
 impement login system (node openid)
-change message passing to JSON, check performance hit
 Refactor code to use more advanced Javascript techniques.
 lots more 
