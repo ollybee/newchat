@@ -71,12 +71,8 @@ $(document).ready(function() {
 			}
 			break;
 		case 'usercount':
-			/*			//console.log(payload[1]);
-			//if (currentusers.hasOwnProperty(incomingid))
 			if (payload.u_id in currentusers) {
-				delete currentusers[payload.u_id];
-				//uodate users gray ou their posts
-				//console.log(currentusers);
+				delete currentusers[payload.u_id]; //uodate users gray ou their posts
 			}
 			else {
 				//curently only alows to reply to logged in users this logic should be moved to newlne
@@ -84,11 +80,12 @@ $(document).ready(function() {
 				currentusers[payload.u_id] = '';
 
 				$('.user' + payload.u_id).live('click', function() {
-					socket.send('reply*' + $(this).children('span').attr('id'));
+					socket.send(JSON.stringify({
+						'type': 'reply',
+						'data': $(this).children('span').attr('id')
+					}));
 				});
-				//console.log(currentusers);
 			}
-*/
 			break;
 		case 'user':
 			uid = payload.u_id;
